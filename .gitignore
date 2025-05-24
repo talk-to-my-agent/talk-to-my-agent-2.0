@@ -134,3 +134,15 @@ dist
 .yarn/build-state.yml
 .yarn/install-state.gz
 .pnp.*
+
+# OSX
+.DS_Store
+# Windows
+Thumbs.db
+# Linux
+*~
+# JetBrains IDEs
+.idea
+# VSCode
+.vscode
+.code-workspace
