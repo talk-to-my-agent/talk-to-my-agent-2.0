@@ -9,6 +9,16 @@ document.addEventListener('DOMContentLoaded', function() {
     const generateButton = document.getElementById('generate-button');
 
     generateButton.addEventListener('click', function() {
-        console.table({"Job Description":jobDescription.value, "Career Goals": careerGoals.value});
+        chrome.runtime.sendMessage({
+            action: 'generate',
+            data:{ 
+                jobDescription: jobDescription.value,
+                careerGoals: careerGoals.value
+            }
+        }, response => { 
+            if(response && response.success) {
+                console.log("Sucessfully generated response:", response.data);
+            }
+        });
     });
 });
