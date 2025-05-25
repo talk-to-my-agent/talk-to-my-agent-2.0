@@ -11,5 +11,4 @@ document.addEventListener('DOMContentLoaded', function() {
     generateButton.addEventListener('click', function() {
         console.table({"Job Description":jobDescription.value, "Career Goals": careerGoals.value});
     });
-
 });
