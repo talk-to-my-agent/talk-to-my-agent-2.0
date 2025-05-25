@@ -8,15 +8,15 @@
     <body>
         <div class="container">
             <h1>Talk to My Agent</h1>
-            <div id="content">Loading...</div>
+            <div id="loader">Loading...</div>
             <form id="inputForm">
-                <label for="job_description">Job Description:</label>
-                <textarea type="text" id="job_description" placeholder="Paste the job description here..." required></textarea>
+                <label for="job-description">Job Description:</label>
+                <textarea type="text" id="job-description" placeholder="Paste the job description here..." required></textarea>
                 
-                <label for="career_goals">Career Goals</label>
-                <textarea type="text" id="career_goals" placeholder="Add details of your career goals..." required></textarea>
+                <label for="career-goals">Career Goals</label>
+                <textarea type="text" id="career-goals" placeholder="Add details of your career goals..." required></textarea>
 
-                <button type="submit">Generate &#10024;</button>
+                <button id="generate-button">Generate &#10024;</button>
             </form>
         </div>
         <script src="popup.js" defer></script>
