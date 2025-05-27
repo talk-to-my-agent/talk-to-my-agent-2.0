@@ -5,20 +5,39 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Talk to My Agent</title>
     <link rel="stylesheet" href="popup.css">
-    <body>
-        <div class="container">
-            <h1>Talk to My Agent</h1>
-            <div id="loader">Loading...</div>
-            <form id="inputForm">
+</head>
+<body>
+    <div class="container">
+        <h1>Talk to My Agent</h1>
+        <div id="alert" class="alert"></div>
+        
+        <form id="inputForm">
+            <div class="form-group">
                 <label for="job-description">Job Description:</label>
-                <textarea type="text" id="job-description" placeholder="Paste the job description here..." required></textarea>
-                
-                <label for="career-goals">Career Goals</label>
-                <textarea type="text" id="career-goals" placeholder="Add details of your career goals..." required></textarea>
+                <textarea id="job-description" placeholder="Paste the job description here..." required></textarea>
+                <div class="error-message" id="job-description-error"></div>
+            </div>
+            
+            <div class="form-group">
+                <label for="career-goals">Career Goals:</label>
+                <textarea id="career-goals" placeholder="Add details of your career goals..." required></textarea>
+                <div class="error-message" id="career-goals-error"></div>
+            </div>
 
-                <button id="generate-button">Generate &#10024;</button>
-            </form>
+            <button type="submit" id="generate-button">Generate Cover Letter &#10024;</button>
+        </form>
+
+        <div id="loader">
+            <div class="spinner"></div>
+            <p>Generating your cover letter...</p>
         </div>
-        <script src="popup.js" defer></script>
-    </body>
+
+        <div id="output" class="output">
+            <h2>Generated Cover Letter</h2>
+            <div id="cover-letter"></div>
+            <button id="copy-button" class="copy-button">Copy to Clipboard 📋</button>
+        </div>
+    </div>
+    <script src="popup.js" defer></script>
+</body>
 </html>
