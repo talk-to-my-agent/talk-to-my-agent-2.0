@@ -4,11 +4,17 @@
   "description": "A Chrome extension that generates cover letters using Gemini API",
   "main": "background.js",
   "scripts": {
-    "test": "mocha"
+    "test": "NODE_OPTIONS=--experimental-vm-modules jest"
   },
   "devDependencies": {
-    "chai": "^5.2.0",
-    "mocha": "^11.5.0",
-    "sinon": "^20.0.0"
+    "jest": "^29.7.0"
+  },
+  "type": "module",
+  "jest": {
+    "transform": {},
+    "testMatch": [
+      "**/?(*.)+(spec|test).[jt]s?(x)",
+      "**/?(*.)+(spec|test).mjs"
+    ]
   }
 }
