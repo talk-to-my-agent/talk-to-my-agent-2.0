@@ -3,5 +3,12 @@
   "version": "1.0.0",
   "description": "A Chrome extension that generates cover letters using Gemini API",
   "main": "background.js",
-  "scripts": {}
+  "scripts": {
+    "test": "mocha"
+  },
+  "devDependencies": {
+    "chai": "^5.2.0",
+    "mocha": "^11.5.0",
+    "sinon": "^20.0.0"
+  }
 }
