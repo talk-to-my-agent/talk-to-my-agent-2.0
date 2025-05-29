@@ -47,4 +47,71 @@ describe('handle_gemini_request', () => {
         expect(result).toBeNull();
         global.fetch.mockClear();
     });
+
+    it('handles API timeout correctly', async () => {
+        jest.useFakeTimers();
+        global.fetch = jest.fn(() => new Promise((resolve) => {
+            // This promise never resolves, simulating a hanging request
+            setTimeout(resolve, 5000);
+        }));
+
+        const promise = handle_gemini_request('Write a cover letter');
+        jest.advanceTimersByTime(6000); // Advance past the 5s timeout
+
+        const result = await promise;
+        expect(result).toBeNull();
+        
+        jest.useRealTimers();
+        global.fetch.mockClear();
+    });
+
+    it('handles malformed API response gracefully', async () => {
+        global.fetch = jest.fn(() =>
+            Promise.resolve({
+                ok: true,
+                json: () => Promise.resolve({
+                    // Missing the expected structure
+                    malformed: true
+                })
+            })
+        );
+
+        const result = await handle_gemini_request('Write a cover letter');
+        expect(result).toBe('No response from Gemini');
+        global.fetch.mockClear();
+    });
+
+    it('handles network errors gracefully', async () => {
+        global.fetch = jest.fn(() =>
+            Promise.reject(new Error('Network error'))
+        );
+
+        const result = await handle_gemini_request('Write a cover letter');
+        expect(result).toBeNull();
+        global.fetch.mockClear();
+    });
+
+    it('verifies safety settings in the API request', async () => {
+        global.fetch = jest.fn(() =>
+            Promise.resolve({
+                ok: true,
+                json: () => Promise.resolve({
+                    candidates: [{ content: { parts: [{ text: 'Response' }] } }]
+                })
+            })
+        );
+
+        await handle_gemini_request('Write a cover letter');
+        
+        expect(global.fetch).toHaveBeenCalledWith(
+            expect.any(String),
+            expect.objectContaining({
+                body: expect.stringContaining('"category":"HARM_CATEGORY_HARASSMENT"'),
+                headers: expect.objectContaining({
+                    'Content-type': 'application/json'
+                })
+            })
+        );
+        global.fetch.mockClear();
+    });
 });

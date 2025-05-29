@@ -12,46 +12,53 @@ const handle_gemini_request = async (query) => {
     // Make the query to Gemini API with timeout
     try {
         const controller = new AbortController();
-        const timeout = setTimeout(() => controller.abort(), 30000); // 30 second timeout
+        const timeoutId = setTimeout(() => {
+            controller.abort();
+        }, 30000); // 30 second timeout
 
-        const response = await fetch(apiURL, {
-            method: "POST",
-            headers: {
-                'Content-type': 'application/json',
-            },
-            body: JSON.stringify({
-                contents: [
-                    {
-                        parts: [{
-                            text: query
-                        }]
-                    }
-                ],
-                safetySettings: [
-                    {
-                        category: "HARM_CATEGORY_HARASSMENT",
-                        threshold: "BLOCK_MEDIUM_AND_ABOVE"
-                    }
-                ]
-            }),
-            signal: controller.signal
-        });
+        try {
+            const response = await fetch(apiURL, {
+                method: "POST",
+                headers: {
+                    'Content-type': 'application/json',
+                },
+                body: JSON.stringify({
+                    contents: [
+                        {
+                            parts: [{
+                                text: query
+                            }]
+                        }
+                    ],
+                    safetySettings: [
+                        {
+                            category: "HARM_CATEGORY_HARASSMENT",
+                            threshold: "BLOCK_MEDIUM_AND_ABOVE"
+                        }
+                    ]
+                }),
+                signal: controller.signal
+            });
 
-        clearTimeout(timeout);
+            clearTimeout(timeoutId);
 
-        if (!response.ok) {
-            const errorText = await response.text();
-            throw new Error(`HTTP error! status: ${response.status}, message: ${errorText}`);
+            if (!response.ok) {
+                return null;
+            }
+
+            const data = await response.json();
+            console.log("Gemini API Response:", data);
+
+            if (!data.candidates?.[0]?.content?.parts?.[0]?.text) {
+                return "No response from Gemini";
+            }
+
+            return data.candidates[0].content.parts[0].text;
+        } finally {
+            clearTimeout(timeoutId);
         }
-
-        const data = await response.json();
-        console.log("Gemini API Response:", data);
-
-        const generatedText = data.candidates?.[0]?.content?.parts[0]?.text ?? "No response from Gemini";
-        return generatedText
     } catch (error) {
         console.error("Error making Gemini API request: ", error);
-
         return null;
     }
 }
