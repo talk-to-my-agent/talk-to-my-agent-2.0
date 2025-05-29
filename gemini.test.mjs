@@ -48,18 +48,58 @@ describe('handle_gemini_request', () => {
         global.fetch.mockClear();
     });
 
-    it('handles API timeout correctly', async () => {
+    it('cleans up timeout even when request succeeds quickly', async () => {
         jest.useFakeTimers();
+        global.fetch = jest.fn(() =>
+            Promise.resolve({
+                ok: true,
+                json: () => Promise.resolve({
+                    candidates: [
+                        {
+                            content: {
+                                parts: [
+                                    { text: 'Quick response' }
+                                ]
+                            }
+                        }
+                    ]
+                })
+            })
+        );
+
+        const clearTimeoutSpy = jest.spyOn(global, 'clearTimeout');
+        
+        const promise = handle_gemini_request('Write a cover letter', 2000);
+        
+        // Advance time a little bit
+        jest.advanceTimersByTime(100);
+        
+        const result = await promise;
+        
+        expect(result).toBe('Quick response');
+        expect(clearTimeoutSpy).toHaveBeenCalled();
+        
+        clearTimeoutSpy.mockRestore();
+        jest.useRealTimers();
+        global.fetch.mockClear();
+    });
+
+    it('aborts the fetch request when timeout occurs', async () => {
+        jest.useFakeTimers();
+        const abortSpy = jest.fn();
+        const mockController = { abort: abortSpy, signal: {} };
+        global.AbortController = jest.fn(() => mockController);
+
         global.fetch = jest.fn(() => new Promise((resolve) => {
-            // This promise never resolves, simulating a hanging request
-            setTimeout(resolve, 5000);
+            setTimeout(resolve, 3000);
         }));
 
-        const promise = handle_gemini_request('Write a cover letter');
-        jest.advanceTimersByTime(6000); // Advance past the 5s timeout
+        const promise = handle_gemini_request('Write a cover letter', 2000);
+        
+        jest.advanceTimersByTime(3100); // Advance past the 200ms timeout
 
-        const result = await promise;
-        expect(result).toBeNull();
+        await expect(promise).rejects.toThrow('Request timed out after 2000ms');
+        expect(abortSpy).toHaveBeenCalled();
         
         jest.useRealTimers();
         global.fetch.mockClear();
