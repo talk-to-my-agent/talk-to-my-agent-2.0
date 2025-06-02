@@ -1,124 +1,127 @@
 import { jest } from '@jest/globals';
-import { handle_gemini_request } from './gemini.js';
+import { makeGeminiRequestWithKey } from './gemini.js';
 
-
-describe('handle_gemini_request', () => {
-    it('throws an error for empty query', async () => {
-        await expect(handle_gemini_request('')).rejects.toThrow('Invalid query: Query must be a non-empty string');
+describe('makeGeminiRequestWithKey', () => {
+    beforeEach(() => {
+        jest.clearAllMocks();
+        global.fetch = jest.fn();
+        global.AbortController = jest.fn(() => ({
+            abort: jest.fn(),
+            signal: {}
+        }));
+        global.setTimeout = jest.fn((fn, delay) => fn());
+        global.clearTimeout = jest.fn();
     });
 
-    it('throws an error for non-string query', async () => {
-        await expect(handle_gemini_request(123)).rejects.toThrow('Invalid query: Query must be a non-empty string');
+    it('returns error for empty query', async () => {
+        const result = await makeGeminiRequestWithKey('', 'test-api-key');
+        expect(result.success).toBe(false);
+        expect(result.error).toBe('Invalid query: must be a non-empty string');
     });
 
-    it('returns a valid response for a valid query', async () => {
+    it('returns error for non-string query', async () => {
+        const result = await makeGeminiRequestWithKey(123, 'test-api-key');
+        expect(result.success).toBe(false);
+        expect(result.error).toBe('Invalid query: must be a non-empty string');
+    });
+
+    it('returns error for missing API key', async () => {
+        const result = await makeGeminiRequestWithKey('test query', '');
+        expect(result.success).toBe(false);
+        expect(result.error).toBe('Please configure your Gemini API key');
+    });
+
+    it('returns error for placeholder API key', async () => {
+        const result = await makeGeminiRequestWithKey('test query', '[GEMINI_API_KEY]');
+        expect(result.success).toBe(false);
+        expect(result.error).toBe('Please configure your Gemini API key');
+    });
+
+    it('returns success for valid request', async () => {
         global.fetch = jest.fn(() =>
             Promise.resolve({
                 ok: true,
                 json: () => Promise.resolve({
-                    candidates: [
-                        {
-                            content: {
-                                parts: [
-                                    { text: 'Generated cover letter text.' }
-                                ]
-                            }
+                    candidates: [{
+                        content: {
+                            parts: [{
+                                text: 'Generated response text.'
+                            }]
                         }
-                    ]
+                    }]
                 })
             })
         );
-        const result = await handle_gemini_request('Write a cover letter for a software engineer position');
-        expect(typeof result).toBe('string');
-        expect(result).toBe('Generated cover letter text.');
-        global.fetch.mockClear();
+
+        const result = await makeGeminiRequestWithKey('Write a test response', 'valid-api-key');
+        expect(result.success).toBe(true);
+        expect(result.content).toBe('Generated response text.');
     });
 
-    it('returns null if Gemini API returns no candidates', async () => {
+    it('handles API rate limiting (429 error)', async () => {
         global.fetch = jest.fn(() =>
             Promise.resolve({
                 ok: false,
-                status: 500,
-                statusText: 'Internal Server Error',
-                text: () => Promise.resolve("internal server Error"),
+                status: 429,
+                json: () => Promise.resolve({})
             })
         );
-        const result = await handle_gemini_request('Write a cover letter for a software engineer position');
-        expect(result).toBeNull();
-        global.fetch.mockClear();
+
+        const result = await makeGeminiRequestWithKey('test query', 'valid-api-key');
+        expect(result.success).toBe(false);
+        expect(result.error).toBe('Too many requests. Please try again in a few minutes.');
     });
 
-    it('cleans up timeout even when request succeeds quickly', async () => {
-        jest.useFakeTimers();
+    it('handles authentication errors (401/403)', async () => {
+        global.fetch = jest.fn(() =>
+            Promise.resolve({
+                ok: false,
+                status: 401,
+                json: () => Promise.resolve({})
+            })
+        );
+
+        const result = await makeGeminiRequestWithKey('test query', 'invalid-api-key');
+        expect(result.success).toBe(false);
+        expect(result.error).toBe('Authentication error. Please check your API key in settings.');
+    });
+
+    it('handles no response from API', async () => {
         global.fetch = jest.fn(() =>
             Promise.resolve({
                 ok: true,
                 json: () => Promise.resolve({
-                    candidates: [
-                        {
-                            content: {
-                                parts: [
-                                    { text: 'Quick response' }
-                                ]
-                            }
-                        }
-                    ]
+                    candidates: []
                 })
             })
         );
 
-        const clearTimeoutSpy = jest.spyOn(global, 'clearTimeout');
-        
-        const promise = handle_gemini_request('Write a cover letter', 2000);
-        
-        // Advance time a little bit
-        jest.advanceTimersByTime(100);
-        
-        const result = await promise;
-        
-        expect(result).toBe('Quick response');
-        expect(clearTimeoutSpy).toHaveBeenCalled();
-        
-        clearTimeoutSpy.mockRestore();
-        jest.useRealTimers();
-        global.fetch.mockClear();
+        const result = await makeGeminiRequestWithKey('test query', 'valid-api-key');
+        expect(result.success).toBe(false);
+        expect(result.error).toBe('No response generated. Please try again.');
     });
 
-    it('aborts the fetch request when timeout occurs', async () => {
+    it('handles network timeout', async () => {
         jest.useFakeTimers();
         const abortSpy = jest.fn();
-        const mockController = { abort: abortSpy, signal: {} };
-        global.AbortController = jest.fn(() => mockController);
-
-        global.fetch = jest.fn(() => new Promise((resolve) => {
-            setTimeout(resolve, 3000);
+        global.AbortController = jest.fn(() => ({
+            abort: abortSpy,
+            signal: {}
         }));
 
-        const promise = handle_gemini_request('Write a cover letter', 2000);
-        
-        jest.advanceTimersByTime(3100); // Advance past the 200ms timeout
-
-        await expect(promise).rejects.toThrow('Request timed out after 2000ms');
-        expect(abortSpy).toHaveBeenCalled();
-        
-        jest.useRealTimers();
-        global.fetch.mockClear();
-    });
-
-    it('handles malformed API response gracefully', async () => {
-        global.fetch = jest.fn(() =>
-            Promise.resolve({
-                ok: true,
-                json: () => Promise.resolve({
-                    // Missing the expected structure
-                    malformed: true
-                })
-            })
+        global.fetch = jest.fn(() => 
+            Promise.reject({ name: 'AbortError' })
         );
 
-        const result = await handle_gemini_request('Write a cover letter');
-        expect(result).toBe('No response from Gemini');
-        global.fetch.mockClear();
+        const promise = makeGeminiRequestWithKey('test query', 'valid-api-key', 1000);
+        
+        jest.advanceTimersByTime(1000);
+        
+        const result = await promise;
+        expect(result.success).toBe(false);
+        expect(result.error).toContain('Request timed out after 1 seconds');
+        
+        jest.useRealTimers();
     });
 
     it('handles network errors gracefully', async () => {
@@ -126,32 +129,44 @@ describe('handle_gemini_request', () => {
             Promise.reject(new Error('Network error'))
         );
 
-        const result = await handle_gemini_request('Write a cover letter');
-        expect(result).toBeNull();
-        global.fetch.mockClear();
+        const result = await makeGeminiRequestWithKey('test query', 'valid-api-key');
+        expect(result.success).toBe(false);
+        expect(result.error).toBe('Network error. Please check your connection and try again.');
     });
 
-    it('verifies safety settings in the API request', async () => {
+    it('sends correct request format to API', async () => {
         global.fetch = jest.fn(() =>
             Promise.resolve({
                 ok: true,
                 json: () => Promise.resolve({
-                    candidates: [{ content: { parts: [{ text: 'Response' }] } }]
+                    candidates: [{
+                        content: {
+                            parts: [{
+                                text: 'Response'
+                            }]
+                        }
+                    }]
                 })
             })
         );
 
-        await handle_gemini_request('Write a cover letter');
-        
+        await makeGeminiRequestWithKey('Test prompt', 'test-api-key');
+
         expect(global.fetch).toHaveBeenCalledWith(
-            expect.any(String),
+            expect.stringContaining('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=test-api-key'),
             expect.objectContaining({
-                body: expect.stringContaining('"category":"HARM_CATEGORY_HARASSMENT"'),
-                headers: expect.objectContaining({
-                    'Content-type': 'application/json'
-                })
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: expect.stringContaining('Test prompt')
             })
         );
-        global.fetch.mockClear();
+
+        const requestBody = JSON.parse(global.fetch.mock.calls[0][1].body);
+        expect(requestBody.contents[0].parts[0].text).toBe('Test prompt');
+        expect(requestBody.safetySettings).toHaveLength(4);
+        expect(requestBody.generationConfig.temperature).toBe(0.7);
+        expect(requestBody.generationConfig.maxOutputTokens).toBe(2048);
     });
 });

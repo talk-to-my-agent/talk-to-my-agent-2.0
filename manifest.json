@@ -3,7 +3,10 @@
   "name": "Talk to My Agent 2.0",
   "version": "2.0.0",
   "description": "A Chrome extension that allows users to apply for jobs by talking to their agent.",
-  "permissions": ["storage"],
+  "permissions": ["storage", "activeTab"],
+  "host_permissions": [
+    "https://generativelanguage.googleapis.com/*"
+  ],
   "options_page": "options/options.html",
   "action": {
     "default_popup": "popup/popup.html",

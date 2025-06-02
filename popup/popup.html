@@ -3,41 +3,84 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Talk to My Agent</title>
+    <title>Talk to My Agent 2.0</title>
     <link rel="stylesheet" href="popup.css">
 </head>
 <body>
     <div class="container">
-        <h1>Talk to My Agent</h1>
+        <header>
+            <h1>🤖 Talk to My Agent 2.0</h1>
+            <button id="settings-btn" class="settings-btn" title="Settings">⚙️</button>
+        </header>
+        
         <div id="alert" class="alert"></div>
         
-        <form id="inputForm">
-            <div class="form-group">
-                <label for="job-description">Job Description:</label>
-                <textarea id="job-description" placeholder="Paste the job description here..." required></textarea>
-                <div class="error-message" id="job-description-error"></div>
+        <div class="tab-container">
+            <div class="tabs">
+                <button class="tab-btn active" data-tab="cover-letter">📝 Cover Letter</button>
+                <button class="tab-btn" data-tab="cv-optimizer">📄 CV Optimizer</button>
             </div>
             
-            <div class="form-group">
-                <label for="career-goals">Career Goals:</label>
-                <textarea id="career-goals" placeholder="Add details of your career goals..." required></textarea>
-                <div class="error-message" id="career-goals-error"></div>
+            <div class="tab-content">
+                <!-- Cover Letter Tab -->
+                <div id="cover-letter-tab" class="tab-panel active">
+                    <form id="cover-letter-form">
+                        <div class="form-group">
+                            <label for="job-description">📋 Job Description:</label>
+                            <textarea id="job-description" placeholder="Paste the job description here..." required rows="4"></textarea>
+                            <div class="error-message" id="job-description-error"></div>
+                        </div>
+                        
+                        <button type="submit" id="generate-cover-letter-btn" class="primary-btn">
+                            ✨ Generate Cover Letter
+                        </button>
+                    </form>
+                    
+                    <div id="cover-letter-output" class="output-section">
+                        <h3>📄 Generated Cover Letter</h3>
+                        <div id="cover-letter-content" class="content-box"></div>
+                        <div class="button-group">
+                            <button id="copy-cover-letter-btn" class="secondary-btn">📋 Copy</button>
+                            <button id="edit-cover-letter-btn" class="secondary-btn">✏️ Edit</button>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- CV Optimizer Tab -->
+                <div id="cv-optimizer-tab" class="tab-panel">
+                    <form id="cv-optimizer-form">
+                        <div class="form-group">
+                            <label for="target-job">🎯 Target Job Description:</label>
+                            <textarea id="target-job" placeholder="Paste the job description you want to optimize your CV for..." required rows="4"></textarea>
+                            <div class="error-message" id="target-job-error"></div>
+                        </div>
+                        
+                        <button type="submit" id="optimize-cv-btn" class="primary-btn">
+                            🚀 Optimize CV
+                        </button>
+                    </form>
+                    
+                    <div id="cv-output" class="output-section">
+                        <h3>📈 Optimized CV</h3>
+                        <div id="cv-content" class="content-box editable" contenteditable="true"></div>
+                        <div class="button-group">
+                            <button id="copy-cv-btn" class="secondary-btn">📋 Copy</button>
+                            <button id="save-cv-btn" class="secondary-btn">💾 Save Changes</button>
+                        </div>
+                    </div>
+                </div>
             </div>
-
-            <button type="submit" id="generate-button">Generate Cover Letter &#10024;</button>
-        </form>
-
-        <div id="loader">
-            <div class="spinner"></div>
-            <p>Generating your cover letter...</p>
         </div>
-
-        <div id="output" class="output">
-            <h2>Generated Cover Letter</h2>
-            <div id="cover-letter"></div>
-            <button id="copy-button" class="copy-button">Copy to Clipboard 📋</button>
+        
+        <!-- Loading Overlay -->
+        <div id="loader" class="loader-overlay">
+            <div class="loader-content">
+                <div class="spinner"></div>
+                <p id="loader-text">Generating content...</p>
+            </div>
         </div>
     </div>
-    <script src="popup.js" defer></script>
+    
+    <script src="popup.js"></script>
 </body>
 </html>

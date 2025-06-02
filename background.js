@@ -1,81 +1,258 @@
-import { handle_gemini_request } from "./gemini.js";
-
 chrome.runtime.onInstalled.addListener(() => {
-  console.log("Extension installed successfully.");
+  console.log("Talk to My Agent 2.0 extension installed successfully.");
 });
 
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
-  if (request.action === "generate") {
-    console.log("Request received to generate response");
+  console.log("Background script received message:", request.action);
+  console.log("Request data keys:", Object.keys(request.data || {}));
 
+  if (request.action === "generateCoverLetter") {
+    console.log("Handling cover letter generation");
+    handleCoverLetterGeneration(request, sendResponse);
+    return true; // Keep message channel open for async response
+  }
+
+  if (request.action === "optimizeCV") {
+    console.log("Handling CV optimization");
+    handleCVOptimization(request, sendResponse);
+    return true; // Keep message channel open for async response
+  }
+
+
+  
+  console.log("Unknown action:", request.action);
+});
+
+async function handleCoverLetterGeneration(request, sendResponse) {
+  try {
+    console.log("Cover letter generation started");
+    console.log("Data validation - Job desc:", !!request.data?.jobDescription, "CV:", !!request.data?.userCV, "API key:", !!request.data?.apiKey);
+    
     // Validate input data
-    if (!request.data?.jobDescription || !request.data?.careerGoals) {
+    if (!request.data?.jobDescription || !request.data?.userCV || !request.data?.apiKey) {
+      console.log("Missing required fields for cover letter generation");
       sendResponse({
         success: false,
-        error:
-          "Missing required fields: job description and career goals are required.",
+        error: "Missing required fields: job description, CV, and API key are required."
       });
-      return true;
+      return;
     }
-    // Log the request data
-    console.table({
-      jobDescription: request.data.jobDescription.substring(0, 100) + "...",
-      careerGoals: request.data.careerGoals.substring(0, 100) + "...",
+
+    const prompt = `You are a professional career consultant. Create a compelling cover letter based on the following:
+
+JOB DESCRIPTION:
+${request.data.jobDescription}
+
+CANDIDATE'S CV:
+${request.data.userCV}
+
+Instructions:
+- Write a professional, personalized cover letter
+- Highlight relevant experience from the CV that matches the job requirements
+- Show enthusiasm for the specific role and company
+- Keep it concise (3-4 paragraphs)
+- Use professional tone but make it engaging
+- Include specific examples from the CV when possible
+
+Please write the cover letter now:`;
+
+    console.log("Making Gemini request for cover letter");
+    const result = await makeGeminiRequest(prompt, request.data.apiKey);
+    console.log("Gemini result for cover letter:", result.success ? "SUCCESS" : "FAILED");
+    
+    if (result.success) {
+      console.log("Cover letter generated successfully, length:", result.content.length);
+      sendResponse({
+        success: true,
+        data: { message: result.content }
+      });
+    } else {
+      console.error("Cover letter generation failed:", result.error);
+      sendResponse({
+        success: false,
+        error: result.error
+      });
+    }
+
+  } catch (error) {
+    console.error("Error in cover letter generation:", error);
+    sendResponse({
+      success: false,
+      error: "An unexpected error occurred during cover letter generation."
+    });
+  }
+}
+
+async function handleCVOptimization(request, sendResponse) {
+  try {
+    console.log("CV optimization started");
+    console.log("Data validation - Target job:", !!request.data?.targetJob, "CV:", !!request.data?.userCV, "API key:", !!request.data?.apiKey);
+    
+    // Validate input data
+    if (!request.data?.targetJob || !request.data?.userCV || !request.data?.apiKey) {
+      console.log("Missing required fields for CV optimization");
+      sendResponse({
+        success: false,
+        error: "Missing required fields: target job description, CV, and API key are required."
+      });
+      return;
+    }
+
+    const prompt = `You are an expert CV optimization consultant. Optimize the following CV for the target job description:
+
+TARGET JOB DESCRIPTION:
+${request.data.targetJob}
+
+CURRENT CV:
+${request.data.userCV}
+
+Instructions:
+- Optimize the CV content to better match the target job requirements
+- Highlight relevant skills, experience, and achievements
+- Use industry-relevant keywords from the job description
+- Maintain the original structure but improve content relevance
+- Make specific sections more impactful for this role
+- Ensure all information remains truthful to the original CV
+- Format as clean, readable text that can be easily copied
+
+Please provide the optimized CV:`;
+
+    console.log("Making Gemini request for CV optimization");
+    const result = await makeGeminiRequest(prompt, request.data.apiKey);
+    console.log("Gemini result for CV optimization:", result.success ? "SUCCESS" : "FAILED");
+    
+    if (result.success) {
+      console.log("CV optimization successful, length:", result.content.length);
+      sendResponse({
+        success: true,
+        data: { message: result.content }
+      });
+    } else {
+      console.error("CV optimization failed:", result.error);
+      sendResponse({
+        success: false,
+        error: result.error
+      });
+    }
+
+  } catch (error) {
+    console.error("Error in CV optimization:", error);
+    sendResponse({
+      success: false,
+      error: "An unexpected error occurred during CV optimization."
+    });
+  }
+}
+
+
+
+async function makeGeminiRequest(prompt, apiKey, timeout = 35000) {
+  console.log("Making Gemini API request");
+  console.log("API key length:", apiKey?.length || 0);
+  console.log("Prompt length:", prompt?.length || 0);
+  
+  const apiURL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
+  
+  if (!prompt || typeof prompt !== 'string') {
+    console.error("Invalid prompt provided");
+    return { success: false, error: 'Invalid prompt: must be a non-empty string' };
+  }
+
+  if (!apiKey || apiKey === "[GEMINI_API_KEY]") {
+    console.error("Invalid API key provided");
+    return { success: false, error: 'Please configure your Gemini API key in settings' };
+  }
+
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => {
+    controller.abort();
+  }, timeout);
+
+  try {
+    console.log("Sending request to Gemini API");
+    const response = await fetch(apiURL, {
+      method: "POST",
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        contents: [{
+          parts: [{
+            text: prompt
+          }]
+        }],
+        safetySettings: [
+          {
+            category: "HARM_CATEGORY_HARASSMENT",
+            threshold: "BLOCK_MEDIUM_AND_ABOVE"
+          },
+          {
+            category: "HARM_CATEGORY_HATE_SPEECH",
+            threshold: "BLOCK_MEDIUM_AND_ABOVE"
+          },
+          {
+            category: "HARM_CATEGORY_SEXUALLY_EXPLICIT",
+            threshold: "BLOCK_MEDIUM_AND_ABOVE"
+          },
+          {
+            category: "HARM_CATEGORY_DANGEROUS_CONTENT",
+            threshold: "BLOCK_MEDIUM_AND_ABOVE"
+          }
+        ],
+        generationConfig: {
+          temperature: 0.7,
+          maxOutputTokens: 2048,
+        }
+      }),
+      signal: controller.signal
     });
 
-    // Prepare the prompt with both job description and career goals
-    const prompt = `Please write a professional cover letter based on the following job description and career goals:
+    clearTimeout(timeoutId);
+    console.log("Gemini API response status:", response.status);
 
-            Job Description:
-            ${request.data.jobDescription}
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      let errorMessage = `API request failed with status ${response.status}`;
+      
+      console.error("API request failed:", response.status, errorData);
+      
+      if (response.status === 429) {
+        errorMessage = "Too many requests. Please try again in a few minutes.";
+      } else if (response.status === 401 || response.status === 403) {
+        errorMessage = "Authentication error. Please check your API key in settings.";
+      } else if (errorData.error?.message) {
+        errorMessage = errorData.error.message;
+      }
+      
+      return { success: false, error: errorMessage };
+    }
 
-            Career Goals:
-            ${request.data.careerGoals}
+    const data = await response.json();
+    console.log("Gemini API response received, has candidates:", !!data.candidates?.[0]);
+    
+    if (!data.candidates?.[0]?.content?.parts?.[0]?.text) {
+      console.error("No text content in Gemini response");
+      return { success: false, error: "No response generated. Please try again." };
+    }
 
-            Please write a compelling cover letter that connects my career goals with the job requirements.`;
+    console.log("Gemini API request successful");
+    return { 
+      success: true, 
+      content: data.candidates[0].content.parts[0].text 
+    };
 
-    // Use promises syntax to handle the asynchronous instead of async/await
-    handle_gemini_request(prompt)
-      .then((generatedCoverLetter) => {
-        if (!generatedCoverLetter) {
-          throw new Error("No response from Gemini API");
-        }
-
-        return {
-          success: true,
-          data: {
-            message: generatedCoverLetter,
-          },
-        };
-      })
-      .catch((error) => {
-        console.error("Error during cover letter generation:", error);
-        let errorMessage = "An error occurred during cover letter generation.";
-
-        // Provide more specific error messages
-        if (error.message.includes("429")) {
-          errorMessage =
-            "Too many requests. Please try again in a few minutes.";
-        } else if (error.message.includes("401")) {
-          errorMessage = "Authentication error. Please check your API key.";
-        } else if (error.message.includes("No response")) {
-          errorMessage =
-            "The AI model did not generate a response. Please try again.";
-        }
-
-        return {
-          success: false,
-          error: errorMessage,
-        };
-      })
-      .then((response) => {
-        console.log(
-          "Sending response back to popup:",
-          response.success ? "Success" : "Error: " + response.error,
-        );
-        sendResponse(response);
-      });
-
-    return true; // Indicates that the response will be sent asynchronously
+  } catch (error) {
+    clearTimeout(timeoutId);
+    
+    if (error.name === 'AbortError') {
+      console.error("Gemini API request timed out");
+      return { success: false, error: `Request timed out after ${timeout/1000} seconds. Please try again.` };
+    }
+    
+    console.error("Gemini API request error:", error);
+    return { 
+      success: false, 
+      error: "Network error. Please check your connection and try again." 
+    };
   }
-});
+}
