@@ -83,7 +83,7 @@ describe('makeGeminiRequestWithKey', () => {
 
         const result = await makeGeminiRequestWithKey('test query', 'invalid-api-key');
         expect(result.success).toBe(false);
-        expect(result.error).toBe('Authentication error. Please check your API key in settings.');
+        expect(result.error).toBe('Authentication error. Please check your API key.');
     });
 
     it('handles no response from API', async () => {

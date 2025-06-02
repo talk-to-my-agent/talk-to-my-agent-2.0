@@ -88,7 +88,6 @@ const makeGeminiRequestWithKey = async (query, apiKey, timeout = 35000) => {
             return { success: false, error: `Request timed out after ${timeout/1000} seconds. Please try again.` };
         }
         
-        console.error("Gemini API request error:", error);
         return { 
             success: false, 
             error: "Network error. Please check your connection and try again." 

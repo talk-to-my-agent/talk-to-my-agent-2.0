@@ -67,10 +67,11 @@ global.console = {
   error: jest.fn()
 };
 
-// Mock setTimeout and clearTimeout
+// Mock setTimeout and clearTimeout - create a simple implementation that works in all scenarios
 global.setTimeout = jest.fn((fn, delay) => {
-  if (delay < 100) fn(); // Auto-execute short timeouts for tests
-  return Math.random();
+  const timeoutId = Math.random();
+  // Don't auto-execute in most cases - let individual tests control this
+  return timeoutId;
 });
 global.clearTimeout = jest.fn();
 
@@ -431,6 +432,14 @@ describe('Options Page', () => {
   });
 
   describe('Input Validation', () => {
+    beforeEach(() => {
+      jest.useFakeTimers();
+    });
+
+    afterEach(() => {
+      jest.useRealTimers();
+    });
+
     it('should handle very long API keys', () => {
       const longApiKey = 'a'.repeat(1000);
       mockElements.geminiApiKeyInput.value = longApiKey;
@@ -453,6 +462,7 @@ describe('Options Page', () => {
 
     it('should handle very long CV content', () => {
       const longCV = 'CV content '.repeat(1000);
+      const trimmedLongCV = longCV.trim(); // Account for trimming in saveData function
       mockElements.geminiApiKeyInput.value = 'normal-key';
       mockElements.cvTextInput.value = longCV;
 
@@ -465,7 +475,7 @@ describe('Options Page', () => {
       expect(mockChrome.storage.local.set).toHaveBeenCalledWith(
         {
           gemini_api_key: 'normal-key',
-          user_cv: longCV
+          user_cv: trimmedLongCV
         },
         expect.any(Function)
       );
@@ -495,6 +505,14 @@ describe('Options Page', () => {
   });
 
   describe('Error Handling', () => {
+    beforeEach(() => {
+      jest.useFakeTimers();
+    });
+
+    afterEach(() => {
+      jest.useRealTimers();
+    });
+
     it('should handle storage quota exceeded error', () => {
       mockElements.geminiApiKeyInput.value = 'test-key';
       mockElements.cvTextInput.value = 'test-cv';
