@@ -18,12 +18,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     return true; // Keep message channel open for async response
   }
 
-  // Legacy support for old action
-  if (request.action === "generate") {
-    console.log("Handling legacy generation");
-    handleLegacyGeneration(request, sendResponse);
-    return true;
-  }
+
   
   console.log("Unknown action:", request.action);
 });
@@ -149,50 +144,7 @@ Please provide the optimized CV:`;
   }
 }
 
-async function handleLegacyGeneration(request, sendResponse) {
-  try {
-    if (!request.data?.jobDescription || !request.data?.careerGoals) {
-      sendResponse({
-        success: false,
-        error: "Missing required fields: job description and career goals are required."
-      });
-      return;
-    }
 
-    const prompt = `Please write a professional cover letter based on the following job description and career goals:
-
-Job Description:
-${request.data.jobDescription}
-
-Career Goals:
-${request.data.careerGoals}
-
-Please write a compelling cover letter that connects my career goals with the job requirements.`;
-
-    // Use default API key for legacy support
-    const apiKey = "[GEMINI_API_KEY]";
-    const result = await makeGeminiRequest(prompt, apiKey);
-    
-    if (result.success) {
-      sendResponse({
-        success: true,
-        data: { message: result.content }
-      });
-    } else {
-      sendResponse({
-        success: false,
-        error: result.error
-      });
-    }
-
-  } catch (error) {
-    console.error("Error in legacy generation:", error);
-    sendResponse({
-      success: false,
-      error: "An unexpected error occurred during generation."
-    });
-  }
-}
 
 async function makeGeminiRequest(prompt, apiKey, timeout = 35000) {
   console.log("Making Gemini API request");
