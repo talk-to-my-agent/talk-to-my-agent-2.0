@@ -147,9 +147,18 @@ Use the included `test.html` file to:
 - **Session-Only Storage**: Sensitive data cleared when browser closes
 - **API Key Protection**: Keys never logged or transmitted unnecessarily
 
-## 📄 License
+## 📜 License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+This project is licensed under the GNU Affero General Public License v3.0 (AGPL-3.0). This means:
+
+- You can use this software for any purpose
+- You can modify the source code
+- You can distribute this software
+- You must disclose the source code when you distribute this software
+- Modifications must also be licensed under AGPL-3.0
+- If you run a modified version of this software on a server, you must make the source code available to users
+
+For more details, see the [LICENSE](LICENSE) file in the repository.
 
 ## 🆘 Support
 
