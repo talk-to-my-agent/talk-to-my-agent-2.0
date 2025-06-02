@@ -92,12 +92,16 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function checkSettings() {
-        const apiKey = sessionStorage.getItem('gemini_api_key');
-        const userCV = sessionStorage.getItem('user_cv');
-
-        if (!apiKey || !userCV) {
-            showAlert('Please configure your API key and CV in settings first.', 'warning');
-        }
+        console.log('Checking settings...');
+        chrome.storage.local.get(['gemini_api_key', 'user_cv'], function(result) {
+            console.log('Settings check result:', result);
+            if (!result.gemini_api_key || !result.user_cv) {
+                console.log('Missing settings - API key:', !!result.gemini_api_key, 'CV:', !!result.user_cv);
+                showAlert('Please configure your API key and CV in settings first.', 'warning');
+            } else {
+                console.log('Settings OK - API key and CV found');
+            }
+        });
     }
 
     async function handleCoverLetterGeneration(e) {
@@ -107,40 +111,51 @@ document.addEventListener('DOMContentLoaded', function() {
             return;
         }
 
-        const apiKey = sessionStorage.getItem('gemini_api_key');
-        const userCV = sessionStorage.getItem('user_cv');
-
-        if (!apiKey || !userCV) {
-            showAlert('Please configure your API key and CV in settings first.', 'error');
-            return;
-        }
-
         showLoader('Generating cover letter...');
 
-        try {
-            const response = await sendMessage({
-                action: 'generateCoverLetter',
-                data: {
-                    jobDescription: jobDescription.value.trim(),
-                    userCV: userCV,
-                    apiKey: apiKey
-                }
-            });
+        chrome.storage.local.get(['gemini_api_key', 'user_cv'], async function(result) {
+            console.log('Cover letter generation - retrieved data:', result);
+            const apiKey = result.gemini_api_key;
+            const userCV = result.user_cv;
 
-            hideLoader();
-
-            if (response && response.success) {
-                coverLetterContent.textContent = response.data.message;
-                coverLetterOutput.style.display = 'flex';
-                showAlert('Cover letter generated successfully!', 'success');
-            } else {
-                showAlert(response?.error || 'Failed to generate cover letter', 'error');
+            if (!apiKey || !userCV) {
+                console.log('Missing data for cover letter - API key:', !!apiKey, 'CV:', !!userCV);
+                hideLoader();
+                showAlert('Please configure your API key and CV in settings first.', 'error');
+                return;
             }
-        } catch (error) {
-            hideLoader();
-            showAlert('An error occurred while generating the cover letter', 'error');
-        }
+
+            console.log('Starting cover letter generation with API key length:', apiKey.length, 'CV length:', userCV.length);
+
+            try {
+                const response = await sendMessage({
+                    action: 'generateCoverLetter',
+                    data: {
+                        jobDescription: jobDescription.value.trim(),
+                        userCV: userCV,
+                        apiKey: apiKey
+                    }
+                });
+
+                console.log('Cover letter response:', response);
+                hideLoader();
+
+                if (response && response.success) {
+                    coverLetterContent.textContent = response.data.message;
+                    coverLetterOutput.style.display = 'flex';
+                    showAlert('Cover letter generated successfully!', 'success');
+                } else {
+                    console.error('Cover letter generation failed:', response?.error);
+                    showAlert(response?.error || 'Failed to generate cover letter', 'error');
+                }
+            } catch (error) {
+                hideLoader();
+                showAlert('An error occurred while generating the cover letter', 'error');
+            }
+        });
     }
+
+
 
     async function handleCvOptimization(e) {
         e.preventDefault();
@@ -149,39 +164,48 @@ document.addEventListener('DOMContentLoaded', function() {
             return;
         }
 
-        const apiKey = sessionStorage.getItem('gemini_api_key');
-        const userCV = sessionStorage.getItem('user_cv');
-
-        if (!apiKey || !userCV) {
-            showAlert('Please configure your API key and CV in settings first.', 'error');
-            return;
-        }
-
         showLoader('Optimizing CV...');
 
-        try {
-            const response = await sendMessage({
-                action: 'optimizeCV',
-                data: {
-                    targetJob: targetJob.value.trim(),
-                    userCV: userCV,
-                    apiKey: apiKey
-                }
-            });
+        chrome.storage.local.get(['gemini_api_key', 'user_cv'], async function(result) {
+            console.log('CV optimization - retrieved data:', result);
+            const apiKey = result.gemini_api_key;
+            const userCV = result.user_cv;
 
-            hideLoader();
-
-            if (response && response.success) {
-                cvContent.textContent = response.data.message;
-                cvOutput.style.display = 'flex';
-                showAlert('CV optimized successfully!', 'success');
-            } else {
-                showAlert(response?.error || 'Failed to optimize CV', 'error');
+            if (!apiKey || !userCV) {
+                console.log('Missing data for CV optimization - API key:', !!apiKey, 'CV:', !!userCV);
+                hideLoader();
+                showAlert('Please configure your API key and CV in settings first.', 'error');
+                return;
             }
-        } catch (error) {
-            hideLoader();
-            showAlert('An error occurred while optimizing the CV', 'error');
-        }
+
+            console.log('Starting CV optimization with API key length:', apiKey.length, 'CV length:', userCV.length);
+
+            try {
+                const response = await sendMessage({
+                    action: 'optimizeCV',
+                    data: {
+                        targetJob: targetJob.value.trim(),
+                        userCV: userCV,
+                        apiKey: apiKey
+                    }
+                });
+
+                console.log('CV optimization response:', response);
+                hideLoader();
+
+                if (response && response.success) {
+                    cvContent.textContent = response.data.message;
+                    cvOutput.style.display = 'flex';
+                    showAlert('CV optimized successfully!', 'success');
+                } else {
+                    console.error('CV optimization failed:', response?.error);
+                    showAlert(response?.error || 'Failed to optimize CV', 'error');
+                }
+            } catch (error) {
+                hideLoader();
+                showAlert('An error occurred while optimizing the CV', 'error');
+            }
+        });
     }
 
     function enableCoverLetterEdit() {
@@ -207,8 +231,16 @@ document.addEventListener('DOMContentLoaded', function() {
 
     function saveCvChanges() {
         const updatedCV = cvContent.textContent;
-        sessionStorage.setItem('user_cv', updatedCV);
-        showAlert('CV changes saved to session!', 'success');
+        console.log('Saving CV changes, new length:', updatedCV.length);
+        chrome.storage.local.set({user_cv: updatedCV}, function() {
+            if (chrome.runtime.lastError) {
+                console.error('Error saving CV changes:', chrome.runtime.lastError);
+                showAlert('Error saving CV changes', 'error');
+                return;
+            }
+            console.log('CV changes saved successfully');
+            showAlert('CV changes saved!', 'success');
+        });
     }
 
     async function copyToClipboard(text, type) {

@@ -4,28 +4,38 @@ chrome.runtime.onInstalled.addListener(() => {
 
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   console.log("Background script received message:", request.action);
+  console.log("Request data keys:", Object.keys(request.data || {}));
 
   if (request.action === "generateCoverLetter") {
+    console.log("Handling cover letter generation");
     handleCoverLetterGeneration(request, sendResponse);
     return true; // Keep message channel open for async response
   }
 
   if (request.action === "optimizeCV") {
+    console.log("Handling CV optimization");
     handleCVOptimization(request, sendResponse);
     return true; // Keep message channel open for async response
   }
 
   // Legacy support for old action
   if (request.action === "generate") {
+    console.log("Handling legacy generation");
     handleLegacyGeneration(request, sendResponse);
     return true;
   }
+  
+  console.log("Unknown action:", request.action);
 });
 
 async function handleCoverLetterGeneration(request, sendResponse) {
   try {
+    console.log("Cover letter generation started");
+    console.log("Data validation - Job desc:", !!request.data?.jobDescription, "CV:", !!request.data?.userCV, "API key:", !!request.data?.apiKey);
+    
     // Validate input data
     if (!request.data?.jobDescription || !request.data?.userCV || !request.data?.apiKey) {
+      console.log("Missing required fields for cover letter generation");
       sendResponse({
         success: false,
         error: "Missing required fields: job description, CV, and API key are required."
@@ -51,14 +61,18 @@ Instructions:
 
 Please write the cover letter now:`;
 
+    console.log("Making Gemini request for cover letter");
     const result = await makeGeminiRequest(prompt, request.data.apiKey);
+    console.log("Gemini result for cover letter:", result.success ? "SUCCESS" : "FAILED");
     
     if (result.success) {
+      console.log("Cover letter generated successfully, length:", result.content.length);
       sendResponse({
         success: true,
         data: { message: result.content }
       });
     } else {
+      console.error("Cover letter generation failed:", result.error);
       sendResponse({
         success: false,
         error: result.error
@@ -76,8 +90,12 @@ Please write the cover letter now:`;
 
 async function handleCVOptimization(request, sendResponse) {
   try {
+    console.log("CV optimization started");
+    console.log("Data validation - Target job:", !!request.data?.targetJob, "CV:", !!request.data?.userCV, "API key:", !!request.data?.apiKey);
+    
     // Validate input data
     if (!request.data?.targetJob || !request.data?.userCV || !request.data?.apiKey) {
+      console.log("Missing required fields for CV optimization");
       sendResponse({
         success: false,
         error: "Missing required fields: target job description, CV, and API key are required."
@@ -104,14 +122,18 @@ Instructions:
 
 Please provide the optimized CV:`;
 
+    console.log("Making Gemini request for CV optimization");
     const result = await makeGeminiRequest(prompt, request.data.apiKey);
+    console.log("Gemini result for CV optimization:", result.success ? "SUCCESS" : "FAILED");
     
     if (result.success) {
+      console.log("CV optimization successful, length:", result.content.length);
       sendResponse({
         success: true,
         data: { message: result.content }
       });
     } else {
+      console.error("CV optimization failed:", result.error);
       sendResponse({
         success: false,
         error: result.error
@@ -173,13 +195,19 @@ Please write a compelling cover letter that connects my career goals with the jo
 }
 
 async function makeGeminiRequest(prompt, apiKey, timeout = 35000) {
+  console.log("Making Gemini API request");
+  console.log("API key length:", apiKey?.length || 0);
+  console.log("Prompt length:", prompt?.length || 0);
+  
   const apiURL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
   
   if (!prompt || typeof prompt !== 'string') {
+    console.error("Invalid prompt provided");
     return { success: false, error: 'Invalid prompt: must be a non-empty string' };
   }
 
   if (!apiKey || apiKey === "[GEMINI_API_KEY]") {
+    console.error("Invalid API key provided");
     return { success: false, error: 'Please configure your Gemini API key in settings' };
   }
 
@@ -189,6 +217,7 @@ async function makeGeminiRequest(prompt, apiKey, timeout = 35000) {
   }, timeout);
 
   try {
+    console.log("Sending request to Gemini API");
     const response = await fetch(apiURL, {
       method: "POST",
       headers: {
@@ -227,10 +256,13 @@ async function makeGeminiRequest(prompt, apiKey, timeout = 35000) {
     });
 
     clearTimeout(timeoutId);
+    console.log("Gemini API response status:", response.status);
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
       let errorMessage = `API request failed with status ${response.status}`;
+      
+      console.error("API request failed:", response.status, errorData);
       
       if (response.status === 429) {
         errorMessage = "Too many requests. Please try again in a few minutes.";
@@ -244,11 +276,14 @@ async function makeGeminiRequest(prompt, apiKey, timeout = 35000) {
     }
 
     const data = await response.json();
+    console.log("Gemini API response received, has candidates:", !!data.candidates?.[0]);
     
     if (!data.candidates?.[0]?.content?.parts?.[0]?.text) {
+      console.error("No text content in Gemini response");
       return { success: false, error: "No response generated. Please try again." };
     }
 
+    console.log("Gemini API request successful");
     return { 
       success: true, 
       content: data.candidates[0].content.parts[0].text 
@@ -258,6 +293,7 @@ async function makeGeminiRequest(prompt, apiKey, timeout = 35000) {
     clearTimeout(timeoutId);
     
     if (error.name === 'AbortError') {
+      console.error("Gemini API request timed out");
       return { success: false, error: `Request timed out after ${timeout/1000} seconds. Please try again.` };
     }
     
