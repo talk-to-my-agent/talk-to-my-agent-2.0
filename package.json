@@ -1,10 +1,19 @@
 {
   "name": "talk-to-my-agent",
-  "version": "1.0.0",
-  "description": "A Chrome extension that generates cover letters using Gemini API",
+  "version": "2.0.0",
+  "description": "A Chrome extension that generates cover letters and optimizes CVs using Gemini AI",
   "main": "background.js",
   "scripts": {
-    "test": "NODE_OPTIONS=--experimental-vm-modules jest"
+    "test": "NODE_OPTIONS=--experimental-vm-modules jest",
+    "test:watch": "NODE_OPTIONS=--experimental-vm-modules jest --watch",
+    "test:coverage": "NODE_OPTIONS=--experimental-vm-modules jest --coverage",
+    "test:unit": "NODE_OPTIONS=--experimental-vm-modules jest --testPathPattern='\\.(test|spec)\\.(js|mjs)$'",
+    "test:background": "NODE_OPTIONS=--experimental-vm-modules jest background.test.mjs",
+    "test:popup": "NODE_OPTIONS=--experimental-vm-modules jest popup/popup.test.mjs",
+    "test:options": "NODE_OPTIONS=--experimental-vm-modules jest options/options.test.mjs",
+    "test:gemini": "NODE_OPTIONS=--experimental-vm-modules jest gemini.test.mjs",
+    "test:verbose": "NODE_OPTIONS=--experimental-vm-modules jest --verbose",
+    "test:ci": "NODE_OPTIONS=--experimental-vm-modules jest --ci --coverage --watchAll=false"
   },
   "devDependencies": {
     "@babel/preset-env": "^7.27.2",
@@ -12,5 +21,4 @@
     "jest": "^29.7.0"
   },
   "type": "module"
-  
 }
