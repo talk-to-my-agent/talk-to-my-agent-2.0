@@ -4,9 +4,7 @@
   "version": "2.0.0",
   "description": "A Chrome extension that allows users to apply for jobs by talking to their agent.",
   "permissions": ["storage", "activeTab"],
-  "host_permissions": [
-    "https://generativelanguage.googleapis.com/*"
-  ],
+  "host_permissions": ["https://generativelanguage.googleapis.com/*"],
   "options_page": "options/options.html",
   "action": {
     "default_popup": "popup/popup.html",
@@ -24,5 +22,8 @@
   "background": {
     "service_worker": "background.js",
     "type": "module"
+  },
+  "content_security_policy": {
+    "extension_pages": "script-src 'self' https://*.googleapis.com; object-src 'none'"
   }
 }

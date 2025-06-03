@@ -13,7 +13,9 @@
     "test:options": "NODE_OPTIONS=--experimental-vm-modules jest options/options.test.mjs",
     "test:gemini": "NODE_OPTIONS=--experimental-vm-modules jest gemini.test.mjs",
     "test:verbose": "NODE_OPTIONS=--experimental-vm-modules jest --verbose",
-    "test:ci": "NODE_OPTIONS=--experimental-vm-modules jest --ci --coverage --watchAll=false"
+    "test:ci": "NODE_OPTIONS=--experimental-vm-modules jest --ci --coverage --watchAll=false",
+    "build": "webpack --mode production",
+    "zip": "zip -r extension.zip dist"
   },
   "devDependencies": {
     "@babel/preset-env": "^7.27.2",
